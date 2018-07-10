@@ -1,0 +1,281 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "ExecutionLamba": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": [
+              "\n",
+              [
+                "",
+                "exports.handler = function(event, context, callback) {",
+                "",
+                "    var mess = 'Fanta und Butterkeks';",
+                "",
+                "    var ret = {message : mess};",
+                "",
+                "var response = {",
+                "'statusCode': 200,",
+                "'headers': {},",
+                "   'body': JSON.stringify(ret),",
+                "   'isBase64Encoded': false",
+                "};",
+                "    callback(null, response);",
+                "",
+                "",
+                "};"
+              ]
+            ]
+          }
+        },
+        "Description": "TestLambda",
+        "FunctionName": "ExecutionLamba",
+        "Handler": "index.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "LambdaExecutionRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs4.3"
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        ]
+      }
+    },
+    "LambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ExecutionLamba",
+            "Arn"
+          ]
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "LambdaExecCFN"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "LambdaExecCFN": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Description": "This is Sample API",
+        "Name": "lambda-exec-cfn"
+      }
+    },
+    "SampleMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "LambdaExecCFN"
+        },
+        "ResourceId": {
+          "Fn::GetAtt": [
+            "LambdaExecCFN",
+            "RootResourceId"
+          ]
+        },
+        "HttpMethod": "GET",
+        "AuthorizationType": "NONE",
+        "ApiKeyRequired": true,
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:aws:apigateway:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "ExecutionLamba",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "LambdaExecCFNDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "DependsOn": [
+        "SampleMethod"
+      ],
+      "Properties": {
+        "RestApiId": {
+          "Ref": "LambdaExecCFN"
+        },
+        "Description": "dev deployment",
+        "StageName": "DummyStage"
+      }
+    },
+    "DevStage": {
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "StageName": "dev",
+        "Description": "dev Stage",
+        "RestApiId": {
+          "Ref": "LambdaExecCFN"
+        },
+        "DeploymentId": {
+          "Ref": "LambdaExecCFNDeployment"
+        },
+        "MethodSettings": [
+          {
+            "ResourcePath": "/",
+            "HttpMethod": "GET",
+            "MetricsEnabled": "true",
+            "DataTraceEnabled": "true"
+          }
+        ]
+      }
+    },
+    "LambdaExecApiKey": {
+      "Type": "AWS::ApiGateway::ApiKey",
+      "Properties": {
+        "Name": "LambdaExecCFNApiKey",
+        "Description": "CloudFormation API Key V1",
+        "Enabled": "true"
+      }
+    },
+    "LambdaExecCFNPlan": {
+      "Type": "AWS::ApiGateway::UsagePlan",
+      "DependsOn": [
+        "LambdaExecApiKey"
+      ],
+      "Properties": {
+        "ApiStages": [
+          {
+            "ApiId": {
+              "Ref": "LambdaExecCFN"
+            },
+            "Stage": {
+              "Ref": "DevStage"
+            }
+          }
+        ],
+        "Description": "UsagePlan",
+        "Quota": {
+          "Limit": 5000,
+          "Period": "MONTH"
+        },
+        "Throttle": {
+          "BurstLimit": 200,
+          "RateLimit": 100
+        },
+        "UsagePlanName": "usage-plan"
+      }
+    },
+    "LambdaExecCFNPlanKey": {
+      "Type": "AWS::ApiGateway::UsagePlanKey",
+      "Properties": {
+        "KeyId": {
+          "Ref": "LambdaExecApiKey"
+        },
+        "KeyType": "API_KEY",
+        "UsagePlanId": {
+          "Ref": "LambdaExecCFNPlan"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "apikeyid": {
+      "Description": "API Key ID",
+      "Value": {
+        "Ref": "LambdaExecApiKey"
+      }
+    },
+    "url": {
+      "Description": "API URL",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "LambdaExecCFN"
+            },
+            ".execute-api.",
+            {
+              "Ref": "AWS::Region"
+            },
+            ".amazonaws.com/",
+            {
+              "Ref": "DevStage"
+            },
+            "/"
+          ]
+        ]
+      }
+    },
+    "api": {
+      "Description": "REST API ID",
+      "Value": {
+        "Ref": "LambdaExecCFN"
+      }
+    },
+    "resource": {
+      "Description": "Resource ID",
+      "Value": {
+        "Fn::GetAtt": ["LambdaExecCFN", "RootResourceId"]
+      }
+    },
+    "usageplan": {
+      "Description": "UsagePlan ID",
+      "Value": {
+        "Ref": "LambdaExecCFNPlan"
+      }
+    }
+  }
+}
