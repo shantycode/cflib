@@ -65,10 +65,6 @@ function getdns() {
     info | jq -r '.Stacks[].Outputs[] | select(.OutputKey == "dns").OutputValue'
 }
 
-function getaz() {
-    info | jq -r '.Stacks[].Outputs[] | select(.OutputKey == "az").OutputValue'
-}
-
 # Stupid little lazy helper function
 function getami() {
     aws ec2 describe-images --owners amazon \
