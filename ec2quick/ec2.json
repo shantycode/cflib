@@ -1,0 +1,60 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "UserData": {
+      "Type": "String"
+    }
+  },
+  "Mappings": {},
+  "Resources": {
+    "Ec2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "ImageId": "ami-da526d31",
+        "InstanceType": "m3.medium",
+        "UserData": { "Ref" : "UserData" }
+      }
+    },
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "allow ssh access",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "instanceid": {
+      "Description": "ec2 instance id",
+      "Value": {
+        "Ref": "Ec2Instance"
+      }
+    },
+    "dns": {
+      "Description": "the dns address of the new instance",
+      "Value": {
+        "Fn::GetAtt": [
+          "Ec2Instance",
+          "PublicDnsName"
+        ]
+      }
+    },
+    "ip": {
+      "Description": "ip address of the instance",
+      "Value": {
+        "Fn::GetAtt": [
+          "Ec2Instance",
+          "PublicIp"
+        ]
+      }
+    }
+  }
+}
