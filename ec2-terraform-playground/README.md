@@ -14,5 +14,5 @@ terraform, VPC, ALB and subnets.
 # Kudos
 
 See [this repo](https://github.com/benoutram/terraform-aws-vpc-example) to find
-out where I go the inspiration from.
+out where I got the inspiration from.
 
