@@ -1,6 +1,7 @@
 #!/bin/bash
 
 session_name="SECURITYCLISESSION"
+# Use the account alias here, e.g. "foobar-mgmt"
 org_master="FILL_ME"
 accounts_file="~/.aws/accounts"
 
@@ -59,8 +60,8 @@ function as_switch_account() {
 #  EXECME. Yes, not the best design decision, but dynamic ;-)
 # 
 #~ ❯❯❯ function foo() { ls }
-#~ ❯❯❯ function bar() { $EXECME }
 #~ ❯❯❯ EXECME=foo
+#~ ❯❯❯ function bar() { $EXECME }
 # 
 function as_exec_all() {
   OLD_ACCES_KEY=""
